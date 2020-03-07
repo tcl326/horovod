@@ -10,7 +10,7 @@ from tensorflow.python.framework import ops
 from tensorflow.python.ops import variables
 import os, sys 
 import time
-sys.path.append('/arions/scalability/models-master')
+sys.path.append('/models')
 from official.benchmark.models import trivial_model
 from official.utils.flags import core as flags_core
 from official.utils.logs import logger
