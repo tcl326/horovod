@@ -240,8 +240,7 @@ def main(_):
   logdir = './logs'
   if not os.path.exists(logdir):
     os.makedirs(logdir)
-  else:
-    logname = 'log_{}'.format(flags.FLAGS.cnn_model)
+  logname = 'log_{}'.format(flags.FLAGS.cnn_model)
   logging.get_absl_handler().use_absl_log_file(logname, logdir)
   with logger.benchmark_context(flags.FLAGS):
     run(flags.FLAGS)
