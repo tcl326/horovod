@@ -249,7 +249,7 @@ def define_imagenet_keras_flags():
 def main(_):
   model_helpers.apply_clean(flags.FLAGS)
   logdir = './logs'
-  if not os.path.exists(logdir):
+  if hvd.local_rank() == 0 and not os.path.exists(logdir):
     os.makedirs(logdir)
   logname = 'log_{}'.format(flags.FLAGS.cnn_model)
   if hvd.local_rank() == 0:
