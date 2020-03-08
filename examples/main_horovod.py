@@ -36,15 +36,18 @@ if gpus:
 
 
 class TimeHistory(object):
-  def __init__(self, batch_size, log_steps):
+  def __init__(self, batch_size, log_steps, rank):
     self.batch_size = batch_size
     self.log_steps = log_steps ## typically the number of steps in each epoch
     self.global_steps = 0
     self.epoch_num = 0
     self.examples_per_second = 0
+    self.rank = rank
     logging.info("batch steps: %f", log_steps)
 
   def on_train_end(self):
+    if self.rank != 0:
+      return
     self.train_finish_time = time.time()
     elapsed_time = self.train_finish_time - self.train_start_time
     logging.info(
@@ -53,16 +56,22 @@ class TimeHistory(object):
       elapsed_time, self.examples_per_second / self.epoch_num)
 
   def on_epoch_begin(self, epoch):
+    if self.rank != 0:
+      return
     self.epoch_num += 1
     self.epoch_start = time.time()
 
   def on_batch_begin(self, batch):
+    if self.rank != 0:
+      return
     self.global_steps += 1
     if self.global_steps == 1:
       self.train_start_time = time.time()
       self.start_time = time.time()
 
   def on_batch_end(self, batch, loss):
+    if self.rank != 0:
+      return
     """Records elapse time of the batch and calculates examples per second."""
     logging.info(
       "global step:%d, loss value: %f",
@@ -79,6 +88,8 @@ class TimeHistory(object):
       self.start_time = timestamp
 
   def on_epoch_end(self, epoch):
+    if self.rank != 0:
+      return
     epoch_run_time = time.time() - self.epoch_start
     logging.info(
       "epoch':%d, 'time_taken': %f",
@@ -213,7 +224,7 @@ def run(flags_obj):
 
     sess = tf.compat.v1.Session()
     sess.run(tf.compat.v1.global_variables_initializer()) 
-    summary = TimeHistory(flags_obj.batch_size, steps_per_epoch)
+    summary = TimeHistory(flags_obj.batch_size, steps_per_epoch, hvd.local_rank())
     for epoch_id in range(train_epochs):
       summary.on_epoch_begin(epoch_id)
       for batch_id in range(steps_per_epoch):
@@ -241,10 +252,13 @@ def main(_):
   if not os.path.exists(logdir):
     os.makedirs(logdir)
   logname = 'log_{}'.format(flags.FLAGS.cnn_model)
-  logging.get_absl_handler().use_absl_log_file(logname, logdir)
+  if hvd.local_rank() == 0:
+    logging.get_absl_handler().use_absl_log_file(logname, logdir)
   with logger.benchmark_context(flags.FLAGS):
     run(flags.FLAGS)
   #logging.info('Run stats:\n%s', stats)
+  if hvd.local_rank() != 0:
+    exit()
   with open('end.o', 'w') as f:
     f.write('this test is done')
   exit()
